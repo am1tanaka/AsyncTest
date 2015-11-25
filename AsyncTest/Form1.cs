@@ -48,7 +48,11 @@ namespace AsyncTest
          */
         string getFileName(MemoryStream mem)
         {
-            return "test.txt";
+            // ファイル名のバイト数を取り出す
+            int size = mem.ReadByte() & 0xff;
+            byte[] bt = new byte[size];
+            mem.Read(bt, 0, size);
+            return Encoding.UTF8.GetString(bt);
         }
 
         /**
@@ -56,7 +60,9 @@ namespace AsyncTest
          */
         byte[] getData(MemoryStream mem)
         {
-            return mem.ToArray();
+            byte [] dt = new byte[mem.Length-mem.Position];
+            mem.Read(dt, 0, dt.Length);
+            return dt;
         }
 
         /**
@@ -79,6 +85,17 @@ namespace AsyncTest
                 stream.ReadTimeout = 10000;
                 stream.WriteTimeout = 10000;
 
+                // 受信データ容量を確認
+                int fileSize = (stream.ReadByte() << 24) + (stream.ReadByte() << 16) + (stream.ReadByte() << 8) + stream.ReadByte();
+                // サイズが異常な時はエラーにしておく
+                if ((fileSize < 0) || (fileSize > 10000000))
+                {
+                    textStatus.Text += "ファイルサイズが異常なのでキャンセルします。\r\n";
+                    stream.Close();
+                    client.Close();
+                    continue;
+                }
+
                 // クライアントからのデータを受け取る
                 bool disconnected = false;
                 System.IO.MemoryStream ms = new System.IO.MemoryStream();
@@ -99,9 +116,10 @@ namespace AsyncTest
                     // 受信したデータを蓄積
                     ms.Write(resBytes, 0, resSize);
                 }
-                while (stream.DataAvailable);
+                while (stream.DataAvailable || (ms.Length<fileSize-4));
 
-                // 受信データを文字列に変換
+                // 受信データを保存
+                ms.Position = 0;
                 string fname = getSaveDir()+getFileName(ms);
                 byte [] savedata = getData(ms);
                 File.WriteAllBytes(fname, savedata);

@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.IO;
 
 namespace Client
 {
@@ -25,9 +26,39 @@ namespace Client
             Client();
         }
 
+        /**
+         * 送信するデータをパッケージしてbyte配列にして返す
+         * 0.int ファイルの全容量(big endian)
+         * 4.byte ファイル名(UTF-8)のバイト数
+         * ファイル名
+         * データ配列 
+         */
+        byte[] getSendData(string fname, byte[] data)
+        {
+            MemoryStream ms = new MemoryStream();
+            // ファイル名の生成
+            byte[] arrayfname = Encoding.UTF8.GetBytes(fname);
+            // 全体サイズ(4byte+1byte+ファイル名+データ)
+            int size = 4+1+arrayfname.Length+data.Length;
+            // データ容量
+            ms.WriteByte((byte)((size >> 24) & 0xff));
+            ms.WriteByte((byte)((size >> 16) & 0xff));
+            ms.WriteByte((byte)((size >> 8) & 0xff));
+            ms.WriteByte((byte)((size) & 0xff));
+            // ファイル名容量
+            ms.WriteByte((byte)arrayfname.Length);
+            // ファイル名
+            ms.Write(arrayfname, 0, arrayfname.Length);
+            // データ
+            ms.Write(data, 0, data.Length);
+
+            return ms.ToArray();
+        }
+
         void Client()
         {
             string sendMsg = textBox1.Text;
+            Encoding enc = Encoding.UTF8;
 
             string ipOrHost = "127.0.0.1";
             TcpClient tcp = new TcpClient(ipOrHost, TCP_PORT);
@@ -47,10 +78,8 @@ namespace Client
             ns.WriteTimeout = 10000;
 
             //サーバーにデータを送信する
-            //文字列をByte型配列に変換
-            System.Text.Encoding enc = System.Text.Encoding.UTF8;
-            byte[] sendBytes = enc.GetBytes(sendMsg + '\n');
             //データを送信する
+            byte[] sendBytes = getSendData("sendtest.txt", Encoding.UTF8.GetBytes(textBox1.Text));
             ns.Write(sendBytes, 0, sendBytes.Length);
             Console.WriteLine(sendMsg);
 
