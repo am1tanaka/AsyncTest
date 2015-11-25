@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Net.Sockets;
 using System.Net;
+using System.IO;
 
 namespace AsyncTest
 {
@@ -35,6 +36,30 @@ namespace AsyncTest
         }
 
         /**
+         * 保存先のフォルダ名を作成
+         */
+        string getSaveDir()
+        {
+            return ".\\";
+        }
+
+        /**
+         * 受信データからファイル名を取り出す
+         */
+        string getFileName(MemoryStream mem)
+        {
+            return "test.txt";
+        }
+
+        /**
+         * 受信データをからデータ本体を取り出す
+         */
+        byte[] getData(MemoryStream mem)
+        {
+            return mem.ToArray();
+        }
+
+        /**
          * クライアントからの接続を待機する
          */
         async void WaitConnect()
@@ -55,7 +80,6 @@ namespace AsyncTest
                 stream.WriteTimeout = 10000;
 
                 // クライアントからのデータを受け取る
-                System.Text.Encoding enc = System.Text.Encoding.UTF8;
                 bool disconnected = false;
                 System.IO.MemoryStream ms = new System.IO.MemoryStream();
                 byte[] resBytes = new byte[256];
@@ -64,6 +88,7 @@ namespace AsyncTest
                 {
                     // データの一部を受信
                     resSize = stream.Read(resBytes, 0, resBytes.Length);
+                    textStatus.Text += "recv:"+resSize + "bytes\r\n";
                     // Readが0の時は切断
                     if (resSize == 0)
                     {
@@ -74,23 +99,24 @@ namespace AsyncTest
                     // 受信したデータを蓄積
                     ms.Write(resBytes, 0, resSize);
                 }
-                while (stream.DataAvailable || resBytes[resSize - 1] != '\n');
+                while (stream.DataAvailable);
 
                 // 受信データを文字列に変換
-                string resMsg = enc.GetString(ms.GetBuffer(), 0, (int)ms.Length);
+                string fname = getSaveDir()+getFileName(ms);
+                byte [] savedata = getData(ms);
+                File.WriteAllBytes(fname, savedata);
                 ms.Close();
 
                 // 末尾の\nを削除
-                resMsg = resMsg.TrimEnd('\n');
-                textStatus.Text += resMsg + "\r\n";
+                textStatus.Text += fname+":"+savedata.Length + "bytes\r\n";
 
                 if (!disconnected)
                 {
                     // クライアントにデータ送信
-                    string sendMsg = resMsg.Length.ToString();
-                    byte[] sendBytes = enc.GetBytes(sendMsg + '\n');
+                    string sendMsg = savedata.Length.ToString();
+                    byte[] sendBytes = Encoding.UTF8.GetBytes(sendMsg + '\n');
                     stream.Write(sendBytes, 0, sendBytes.Length);
-                    textStatus.Text += sendMsg+"bytes\r\n";
+                    textStatus.Text += "send "+sendMsg+"bytes\r\n";
                 }
 
                 // 閉じる
