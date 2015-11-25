@@ -23,7 +23,28 @@ namespace Client
 
         private void button1_Click(object sender, EventArgs e)
         {
-            Client();
+            byte[] scshot = Capture();
+            SendTcp(textBox2.Text, textBox1.Text, scshot);
+        }
+
+        byte[] Capture()
+        {
+            //Bitmapの作成
+            Bitmap bmp = new Bitmap(Screen.PrimaryScreen.Bounds.Width,
+                Screen.PrimaryScreen.Bounds.Height);
+            //Graphicsの作成
+            Graphics g = Graphics.FromImage(bmp);
+            //画面全体をコピーする
+            g.CopyFromScreen(new Point(0, 0), new Point(0, 0), bmp.Size);
+            //解放
+            g.Dispose();
+
+            //表示
+            MemoryStream mem = new MemoryStream();
+            bmp.Save(mem, System.Drawing.Imaging.ImageFormat.Png);
+            byte[] dt = mem.ToArray();
+            bmp.Dispose();
+            return dt;
         }
 
         /**
@@ -55,12 +76,14 @@ namespace Client
             return ms.ToArray();
         }
 
-        void Client()
+        /**
+         * 送信
+         */
+        void SendTcp(string ipOrHost, string fname, byte[] data)
         {
             string sendMsg = textBox1.Text;
             Encoding enc = Encoding.UTF8;
 
-            string ipOrHost = "127.0.0.1";
             TcpClient tcp = new TcpClient(ipOrHost, TCP_PORT);
             Console.WriteLine("サーバー({0}:{1})と接続しました({2}:{3})。",
             ((System.Net.IPEndPoint)tcp.Client.RemoteEndPoint).Address,
@@ -79,7 +102,7 @@ namespace Client
 
             //サーバーにデータを送信する
             //データを送信する
-            byte[] sendBytes = getSendData("sendtest.txt", Encoding.UTF8.GetBytes(textBox1.Text));
+            byte[] sendBytes = getSendData(fname, data);
             ns.Write(sendBytes, 0, sendBytes.Length);
             Console.WriteLine(sendMsg);
 

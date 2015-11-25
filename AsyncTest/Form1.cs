@@ -105,7 +105,6 @@ namespace AsyncTest
                 {
                     // データの一部を受信
                     resSize = stream.Read(resBytes, 0, resBytes.Length);
-                    textStatus.Text += "recv:"+resSize + "bytes\r\n";
                     // Readが0の時は切断
                     if (resSize == 0)
                     {
@@ -169,10 +168,6 @@ namespace AsyncTest
         private void Form1_Load(object sender, EventArgs e)
         {
 
-        }
-
-        private void button1_Click(object sender, EventArgs e)
-        {
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
